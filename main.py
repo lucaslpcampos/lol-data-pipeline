@@ -1,12 +1,19 @@
 import requests
 import pandas as pd
 import json
+import os
+from dotenv import load_dotenv
+
+# Carrega as variáveis de ambiente do arquivo .env
+load_dotenv()
 
 with open('header.json', 'r') as file:
     file_content = file.read()
     headers = json.loads(file_content)
 
-api_key = 'RGAPI-b10e7f0d-4e03-4980-865b-5e149eeec659'
+# Acessa a variável de ambiente
+api_key = os.getenv('API_KEY')
+
 account_api_url = r'https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id'
 
 def get_account_api(api_url:str, user_name: list, user_tag: list, api_key:str, headers) -> dict:
