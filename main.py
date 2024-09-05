@@ -2,6 +2,8 @@ import requests
 import pandas as pd
 import json
 import os
+import time
+import datetime
 from dotenv import load_dotenv
 
 # Carrega as variáveis de ambiente do arquivo .env
@@ -50,13 +52,53 @@ def get_summoner_id(api_url:str, account_details:dict, api_key:str, headers, ser
         summoner_details[user[0]] = data
     return summoner_details
 
+matches_api_url = f'https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid'
+
+def get_match_id(api_url: str, account_details: dict, start_time: str, end_time: str, type_queue: str, start: int, count: int, api_key: str, headers) -> dict:
+    matches_id = {}
+    start_time = convert_to_epoch(start_time)
+    end_time = convert_to_epoch(end_time)
+    
+    for user in account_details.items():
+        puuid = user[1]['puuid']
+        matches_id[user[0]] = []  # Inicializa uma lista para cada usuário
+        
+        # Reinicializa o valor de `start` para cada novo usuário
+        current_start = start
+        done = False  # Variável de controle para terminar o while
+
+        while not done:
+            matches_api_url = (
+                f'{api_url}/{puuid}/ids?startTime={start_time}&endTime={end_time}'
+                f'&type={type_queue}&start={current_start}&count={count}&api_key={api_key}'
+            )
+            response = requests.get(matches_api_url, headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if not data:
+                    done = True  # Finaliza o loop while quando não há mais dados
+                else:
+                    matches_id[user[0]].extend(data)  # Acumula partidas
+                    current_start += count  # Incrementa o `start` apenas para este usuário
+            else:
+                print(f'Erro {response.status_code} para o usuário {user[0]}')
+                done = True  # Finaliza o loop while em caso de erro
+    
+    return matches_id
+
+def convert_to_epoch(date_str):
+    # Verifica se a data está no formato DD/MM/YYYY
+    try:
+        date_obj = datetime.datetime.strptime(date_str, "%d/%m/%Y")
+        # Converte para Epoch timestamp em segundos
+        return int(date_obj.timestamp())
+    except ValueError:
+        return "Formato de data inválido. Use o formato DD/MM/YYYY."
+
 account_details = get_account_puuid(api_url=account_api_url, user_name=['pipita','meetu'], user_tag=['br1','mtu'],api_key=api_key,headers=headers)
 
-# account_details = get_account_puuid(api_url=account_api_url, user_name=['pipita','meetu'], user_tag=['br1','mtu'],api_key=api_key,headers=headers)
-# summoner_details = {}
-# for user in account_details.items():
-#     puuid = user[1]['puuid']
-#     data = get_summoner_id(api_url=summoner_api_url, puuid=puuid, api_key=api_key, headers=headers)
-#     summoner_details[user[0]] = data
+matches_id = get_match_id(api_url=matches_api_url, account_details=account_details,start_time="01/08/2024", end_time="05/09/2024", type_queue='ranked',start=0, count=20, api_key=api_key, headers=headers)
+
 summoner_details = get_summoner_id(api_url=summoner_api_url, account_details=account_details, api_key=api_key, headers=headers)
-print(summoner_details)
+print(matches_id)
