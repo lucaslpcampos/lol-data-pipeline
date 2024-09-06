@@ -52,7 +52,7 @@ def get_summoner_id(api_url:str, account_details:dict, api_key:str, headers, ser
         summoner_details[user[0]] = data
     return summoner_details
 
-matches_api_url = f'https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid'
+matches_api_url = f'https://americas.api.riotgames.com/lol/match/v5/matches'
 
 def get_match_id(api_url: str, account_details: dict, start_time: str, end_time: str, type_queue: str, start: int, count: int, api_key: str, headers) -> dict:
     matches_id = {}
@@ -69,7 +69,7 @@ def get_match_id(api_url: str, account_details: dict, start_time: str, end_time:
 
         while not done:
             matches_api_url = (
-                f'{api_url}/{puuid}/ids?startTime={start_time}&endTime={end_time}'
+                f'{api_url}/by-puuid/{puuid}/ids?startTime={start_time}&endTime={end_time}'
                 f'&type={type_queue}&start={current_start}&count={count}&api_key={api_key}'
             )
             response = requests.get(matches_api_url, headers=headers)
@@ -96,9 +96,27 @@ def convert_to_epoch(date_str):
     except ValueError:
         return "Formato de data inválido. Use o formato DD/MM/YYYY."
 
+def get_champions_details(api_url= 'https://ddragon.leagueoflegends.com/cdn/14.17.1/data/en_US/champion.json') -> json:
+    data = requests.get(url=api_url)
+    return data.json()
+
+def get_match_details(api_url: str, matches_id: dict, api_key: str, headers):
+    match_details = {}
+    for details in matches_id.items():
+        user = details[0]
+        for match in details[1]:
+            url = f'{api_url}/{match}?api_key={api_key}'
+            response = requests.get(url=url, headers=headers)
+            data = response.json()
+            match_details[user]=data
+    return match_details
+
 account_details = get_account_puuid(api_url=account_api_url, user_name=['pipita','meetu'], user_tag=['br1','mtu'],api_key=api_key,headers=headers)
 
-matches_id = get_match_id(api_url=matches_api_url, account_details=account_details,start_time="01/08/2024", end_time="05/09/2024", type_queue='ranked',start=0, count=20, api_key=api_key, headers=headers)
+matches_id = get_match_id(api_url=matches_api_url, account_details=account_details,start_time="01/08/2024", end_time="05/08/2024", type_queue='ranked',start=0, count=20, api_key=api_key, headers=headers)
 
 summoner_details = get_summoner_id(api_url=summoner_api_url, account_details=account_details, api_key=api_key, headers=headers)
-print(matches_id)
+
+match_details = get_match_details(api_url=matches_api_url,matches_id=matches_id,api_key=api_key,headers=headers)
+
+print(match_details)
