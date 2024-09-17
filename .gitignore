@@ -1,4 +1,5 @@
 *.ipynb
 .venv/
-*.txt
+developer_key.txt
 .env
+data/
