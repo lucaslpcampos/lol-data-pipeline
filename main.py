@@ -45,7 +45,7 @@ def get_summoner_id(api_url:str, account_details:dict, api_key:str, headers, ser
         api_url.replace('br1',server)
     summoner_details = {}
     for user in account_details.items():
-        puuid = user[1]['puuid']
+        puuid = user[1]["puuid"]
         summoner_api_url = f'{api_url}/{puuid}?api_key={api_key}'
         response = requests.get(f'{summoner_api_url}',headers=headers)
         data = response.json()
@@ -100,23 +100,31 @@ def get_champions_details(api_url= 'https://ddragon.leagueoflegends.com/cdn/14.1
     data = requests.get(url=api_url)
     return data.json()
 
-def get_match_details(api_url: str, matches_id: dict, api_key: str, headers):
+def get_match_details(api_url: str, matches_id: dict, api_key: str, headers: dict) -> dict:
     match_details = {}
-    for details in matches_id.items():
-        user = details[0]
-        for match in details[1]:
+    for user, matches in matches_id.items():
+        match_details[user] = []  # Armazenar múltiplos detalhes de partida por usuário
+        for match in matches:
             url = f'{api_url}/{match}?api_key={api_key}'
-            response = requests.get(url=url, headers=headers)
-            data = response.json()
-            match_details[user]=data
+            try:
+                response = requests.get(url=url, headers=headers)
+                response.raise_for_status()  # Verifica se a requisição foi bem-sucedida
+                data = response.json()
+                match_details[user].append(data)  # Adiciona os detalhes da partida à lista do usuário
+            except requests.exceptions.RequestException as e:
+                print(f"Erro ao obter detalhes da partida {match} para o usuário {user}: {e}")
     return match_details
 
-account_details = get_account_puuid(api_url=account_api_url, user_name=['pipita','meetu'], user_tag=['br1','mtu'],api_key=api_key,headers=headers)
+account_details = get_account_puuid(api_url=account_api_url, user_name=["pipita","meetu"], user_tag=["br1","mtu"],api_key=api_key,headers=headers)
 
-matches_id = get_match_id(api_url=matches_api_url, account_details=account_details,start_time="01/08/2024", end_time="05/08/2024", type_queue='ranked',start=0, count=20, api_key=api_key, headers=headers)
+matches_id = get_match_id(api_url=matches_api_url, account_details=account_details,start_time="01/01/2024", end_time="09/09/2024", type_queue='ranked',start=0, count=20, api_key=api_key, headers=headers)
 
 summoner_details = get_summoner_id(api_url=summoner_api_url, account_details=account_details, api_key=api_key, headers=headers)
 
 match_details = get_match_details(api_url=matches_api_url,matches_id=matches_id,api_key=api_key,headers=headers)
 
-print(match_details)
+file_path = r"C:\Users\lucas\OneDrive\projetos\lol api\data\match_details.json"
+
+with open(file_path, 'w') as arquivo_json:
+    json.dump(match_details, arquivo_json, indent=4)
+
